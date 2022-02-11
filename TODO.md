@@ -1,5 +1,6 @@
 # fzd
 
+- [ ] file walker
 - [ ] explore bleve
 - [ ] file indexing
 - [ ] fuzzy file search
