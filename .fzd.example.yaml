@@ -1,0 +1,45 @@
+default_ignores: &default_ignores
+  - node_modules
+  - "*.out"
+  - build
+  - .git*
+  - "[Tt]emp"
+  - "[Tt]mp"
+  - "*.log"
+  - dist
+  - target
+  - bin
+  - obj
+  - packages
+  - coverage
+  - "*[Bb]ackup*"
+  - .ipynb_checkpoints
+
+locations:
+  - path: $HOME/Projects
+    filters:
+      - top
+    ignores:
+      - *default_ignores
+
+  - path: $HOME/Downloads
+    filters:
+      - not_dir
+    ignores:
+      - *default_ignores
+
+  - path: $HOME/Documents
+    filters:
+      - not_dir
+    ignores:
+      - *default_ignores
+
+  - path: $HOME
+    filters:
+      - not_dir
+    ignores:
+      - Projects # already specified
+      - Downloads # already specified
+      - Documents # already specified
+      - *default_ignores
+      - NTUSER.DAT*

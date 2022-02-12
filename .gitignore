@@ -25,6 +25,7 @@ coverage.txt
 
 # Project specific config
 .fzd*.yaml
+!.fzd.example*.yaml
 
 # Bleve generated index
 *.bleve
