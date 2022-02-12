@@ -1,7 +1,6 @@
 package walker
 
 import (
-	"fmt"
 	"io/fs"
 
 	"github.com/karrick/godirwalk"
@@ -32,14 +31,10 @@ var SkipThis = godirwalk.SkipThis
 // Walk walks the file tree rooted at the specified directory
 // WalkFunc parameter will be called with specified directory path and each file/directory item within it
 func Walk(root string, fn WalkFunc) error {
-	err := godirwalk.Walk(root, &godirwalk.Options{
+	return godirwalk.Walk(root, &godirwalk.Options{
 		Callback: func(osPathName string, de *godirwalk.Dirent) error {
 			e := &entry{Dirent: de}
 			return fn(osPathName, e, nil)
 		},
 	})
-	if err != nil {
-		return fmt.Errorf("failed to traverse %v: %w", root, err)
-	}
-	return nil
 }

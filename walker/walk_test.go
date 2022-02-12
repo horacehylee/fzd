@@ -104,10 +104,8 @@ func (suite *WalkTestSuite) TestWalkFromDir() {
 	t := suite.T()
 
 	root := suite.level0Dir
-	fn := walker.Combine([]walker.WalkFunc{
-		suite.visitedWalkFunc,
-	})
-	walker.Walk(root, fn)
+	walker.Walk(root, suite.visitedWalkFunc)
+
 	assert.Equal(t, []item{
 		newItem(t, suite.level0Dir, true),
 		newItem(t, suite.level0File, false),
@@ -122,10 +120,8 @@ func (suite *WalkTestSuite) TestWalkFromDirWithExtraSeparatorAtEnd() {
 	t := suite.T()
 
 	root := suite.level0Dir + string(os.PathSeparator)
-	fn := walker.Combine([]walker.WalkFunc{
-		suite.visitedWalkFunc,
-	})
-	walker.Walk(root, fn)
+	walker.Walk(root, suite.visitedWalkFunc)
+
 	assert.Equal(t, []item{
 		// WalkFunc should be called with clean path
 		newItem(t, filepath.Clean(root), true),
@@ -141,9 +137,7 @@ func (suite *WalkTestSuite) TestWalkFromFile() {
 	t := suite.T()
 
 	root := suite.level0File
-	fn := walker.Combine([]walker.WalkFunc{
-		suite.visitedWalkFunc,
-	})
-	walker.Walk(root, fn)
+	walker.Walk(root, suite.visitedWalkFunc)
+
 	assert.Empty(t, suite.visited)
 }
