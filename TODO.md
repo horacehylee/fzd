@@ -1,6 +1,7 @@
 # fzd
 
 - [x] file walker
+- [x] file filters
 - [ ] explore bleve for file indexing
 - [ ] fuzzy file search
 - [ ] command line
