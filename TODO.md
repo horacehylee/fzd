@@ -1,8 +1,7 @@
 # fzd
 
-- [ ] file walker
-- [ ] explore bleve
-- [ ] file indexing
+- [x] file walker
+- [ ] explore bleve for file indexing
 - [ ] fuzzy file search
 - [ ] command line
     - [ ] options file
