@@ -23,4 +23,8 @@ go.work
 # Coverage file
 coverage.txt
 
+# Project specific config
 .fzd*.yaml
+
+# Bleve generated index
+*.bleve
