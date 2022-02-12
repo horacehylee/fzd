@@ -4,13 +4,16 @@
 - [x] file filters
 - [x] explore bleve for file indexing
 - [x] fuzzy file search
-    - [ ] unit tests
-    - [ ] reindexing with Index should be atomic
-    - [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
+- [ ] unit tests
+- [ ] reindexing with Index should be atomic
+- [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
 - [ ] command line
-    - [ ] options file
+    - [x] config file
+    - [x] allow resolve of env variable (i.e. $USERNAME)
     - [ ] commands
         - [ ] `fzd` -> display status of last indexed time, and prompt if continue to set up the indexes
         - [ ] `fzd [keyword]` -> search files with the keyword with fuzzy match (distance specified in config)
         - [ ] `fzd [keyword] --exact` -> exact match for keyword
         - [ ] `fzd [keyword] --distance/-d [number]` -> search with parameter for distance
+- [ ] documentation
+    - [x] example config
