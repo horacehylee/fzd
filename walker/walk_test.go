@@ -1,6 +1,7 @@
 package walker_test
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -104,8 +105,9 @@ func (suite *WalkTestSuite) TestWalkFromDir() {
 	t := suite.T()
 
 	root := suite.level0Dir
-	walker.Walk(root, suite.visitedWalkFunc)
+	err := walker.Walk(root, suite.visitedWalkFunc)
 
+	assert.NoError(t, err)
 	assert.Equal(t, []item{
 		newItem(t, suite.level0Dir, true),
 		newItem(t, suite.level0File, false),
@@ -120,8 +122,9 @@ func (suite *WalkTestSuite) TestWalkFromDirWithExtraSeparatorAtEnd() {
 	t := suite.T()
 
 	root := suite.level0Dir + string(os.PathSeparator)
-	walker.Walk(root, suite.visitedWalkFunc)
+	err := walker.Walk(root, suite.visitedWalkFunc)
 
+	assert.NoError(t, err)
 	assert.Equal(t, []item{
 		// WalkFunc should be called with clean path
 		newItem(t, filepath.Clean(root), true),
@@ -137,7 +140,36 @@ func (suite *WalkTestSuite) TestWalkFromFile() {
 	t := suite.T()
 
 	root := suite.level0File
-	walker.Walk(root, suite.visitedWalkFunc)
+	err := walker.Walk(root, suite.visitedWalkFunc)
 
+	assert.EqualError(t, err, fmt.Sprintf("cannot Walk non-directory: %v", suite.level0File))
 	assert.Empty(t, suite.visited)
+}
+
+func (suite *WalkTestSuite) TestWalkNoErrorReturnedIfSkipThis() {
+	t := suite.T()
+
+	root := suite.level0Dir
+	fn := func(path string, info walker.FileInfo, err error) error {
+		suite.visited = append(suite.visited, item{
+			path:  path,
+			name:  info.Name(),
+			mode:  info.Mode(),
+			isDir: info.IsDir(),
+		})
+		if path == suite.level2Dir {
+			return walker.SkipThis
+		}
+		return nil
+	}
+	err := walker.Walk(root, fn)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []item{
+		newItem(t, suite.level0Dir, true),
+		newItem(t, suite.level0File, false),
+		newItem(t, suite.level1Dir, true),
+		newItem(t, suite.level1File, false),
+		newItem(t, suite.level2Dir, true),
+	}, suite.visited)
 }
