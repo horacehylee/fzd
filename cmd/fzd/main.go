@@ -20,12 +20,14 @@ func main() {
 	}
 	log.Infof("config: %+v", c)
 
-	options := make([]fzd.IndexerOption, 0)
+	var options []fzd.IndexerOption
 	for _, l := range c.Locations {
-		options = append(options, fzd.WithLocation(l.Path, fzd.LocationOption{
+		path := os.ExpandEnv(l.Path)
+		locationOption := fzd.LocationOption{
 			Filters: l.Filters,
 			Ignores: l.Ignores,
-		}))
+		}
+		options = append(options, fzd.WithLocation(path, locationOption))
 	}
 
 	indexer, err := fzd.NewIndexer("fzd.bleve", options...)
