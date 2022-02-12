@@ -2,9 +2,11 @@
 
 - [x] file walker
 - [x] file filters
-- [ ] explore bleve for file indexing
-- [ ] fuzzy file search
-- [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
+- [x] explore bleve for file indexing
+- [x] fuzzy file search
+    - [ ] unit tests
+    - [ ] reindexing with Index should be atomic
+    - [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
 - [ ] command line
     - [ ] options file
     - [ ] commands
