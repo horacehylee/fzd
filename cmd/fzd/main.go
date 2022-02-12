@@ -18,7 +18,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Infof("%+v", c)
+	log.Infof("config: %+v", c)
 
 	options := make([]fzd.IndexerOption, 0)
 	for _, l := range c.Locations {
@@ -39,9 +39,15 @@ func main() {
 		log.Fatal(err)
 	}
 
+	count, err := indexer.DocCount()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Infof("files count: %v", count)
+
 	res, err := indexer.Search(term)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Infof("%+v", res)
+	log.Infof("result: %+v", res)
 }
