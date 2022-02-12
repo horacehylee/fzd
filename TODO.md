@@ -4,6 +4,7 @@
 - [x] file filters
 - [ ] explore bleve for file indexing
 - [ ] fuzzy file search
+- [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
 - [ ] command line
     - [ ] options file
     - [ ] commands
