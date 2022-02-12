@@ -22,3 +22,5 @@ go.work
 
 # Coverage file
 coverage.txt
+
+.fzd*.yaml
