@@ -173,3 +173,27 @@ func (suite *WalkTestSuite) TestWalkNoErrorReturnedIfSkipThis() {
 		newItem(t, suite.level2Dir, true),
 	}, suite.visited)
 }
+
+func (suite *WalkTestSuite) TestWalkNoErrorReturnedIfSkipThisForRoot() {
+	t := suite.T()
+
+	root := suite.level0Dir
+	fn := func(path string, info walker.FileInfo, err error) error {
+		suite.visited = append(suite.visited, item{
+			path:  path,
+			name:  info.Name(),
+			mode:  info.Mode(),
+			isDir: info.IsDir(),
+		})
+		if path == root {
+			return walker.SkipThis
+		}
+		return nil
+	}
+	err := walker.Walk(root, fn)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []item{
+		newItem(t, suite.level0Dir, true),
+	}, suite.visited)
+}
