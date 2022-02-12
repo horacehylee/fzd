@@ -8,6 +8,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func (suite *FilterTestSuite) TestNoFilter() {
+	t := suite.T()
+
+	root := suite.level0Dir
+	fn, err := newFiltersWalkFunc(root, LocationOption{})
+	assert.NoError(t, err)
+
+	fn = walker.Combine(fn, suite.visitedWalkFunc)
+	walker.Walk(root, fn)
+	assert.Equal(t, []string{
+		suite.level0Dir,
+		suite.level0File,
+		suite.level1Dir,
+		suite.level1File,
+		suite.level2Dir,
+		suite.level2File,
+	}, suite.visited)
+}
+
 func (suite *FilterTestSuite) TestTopAndDirFilters() {
 	t := suite.T()
 
