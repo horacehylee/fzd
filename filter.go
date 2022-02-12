@@ -29,6 +29,7 @@ func withTopFilter(root string) walker.WalkFunc {
 			return err
 		}
 		dirname := filepath.Dir(path)
+		// continue if root is current path, as root's parent directory will not equal to root
 		if cleanedRoot != path && cleanedRoot != dirname {
 			return walker.SkipThis
 		}
@@ -54,7 +55,7 @@ func withNotDirFilter(root string) walker.WalkFunc {
 		if err != nil {
 			return err
 		}
-		// if root is directory, continue to walk to get entries inside
+		// if root is current path, continue to walk to get entries inside
 		if cleanedRoot == path {
 			return nil
 		}
@@ -83,13 +84,7 @@ func withIgnoreFilter(ignores ...interface{}) (walker.WalkFunc, error) {
 }
 
 func newFiltersWalkFunc(root string, option LocationOption) (walker.WalkFunc, error) {
-	// add ignoreFilter's walkFunc first
-	ignoreWalkFunc, err := withIgnoreFilter(option.Ignores...)
-	if err != nil {
-		return nil, err
-	}
-
-	walkFuncs := []walker.WalkFunc{ignoreWalkFunc}
+	var walkFuncs []walker.WalkFunc
 	for _, f := range option.Filters {
 		switch f {
 		case Top:
@@ -101,6 +96,15 @@ func newFiltersWalkFunc(root string, option LocationOption) (walker.WalkFunc, er
 		default:
 			return nil, fmt.Errorf("\"%v\" filter is not supported", f)
 		}
+	}
+
+	// add ignoreFilter's walkFunc last, as it requires more computational effort
+	if len(option.Ignores) != 0 {
+		ignoreWalkFunc, err := withIgnoreFilter(option.Ignores...)
+		if err != nil {
+			return nil, err
+		}
+		walkFuncs = append(walkFuncs, ignoreWalkFunc)
 	}
 	return walker.Combine(walkFuncs...), nil
 }
