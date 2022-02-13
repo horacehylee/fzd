@@ -28,4 +28,5 @@ coverage.txt
 !.fzd.example*.yaml
 
 # Bleve generated index
+.fzd
 *.bleve

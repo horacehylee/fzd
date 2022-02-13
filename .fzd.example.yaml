@@ -15,6 +15,9 @@ default_ignores: &default_ignores
   - "*[Bb]ackup*"
   - .ipynb_checkpoints
 
+index:
+  basePath: $HOME/.fzd/indexes
+
 locations:
   - path: $HOME/Projects
     filters:
