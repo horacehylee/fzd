@@ -4,8 +4,18 @@
 - [x] file filters
 - [x] explore bleve for file indexing
 - [x] fuzzy file search
+- [x] reindexing with Index() should be atomicly swapped
+    - [x] check what happens if builder index same key twice, doc count will not be doubled
+    - [x] indexes folder will contains (HEAD file, and 1 or more indexes with UUID folder name)
+    - [x] for opening
+        - [x] first check HEAD file, which should have the UUID pointing to the latest index
+        - [x] then open the UUID index folder
+    - [x] for indexing
+        - [x] build the index with a new UUID folder
+        - [x] update HEAD file to point to new one
+        - [x] swap index with index alias
+        - [x] close the old index and clean up all other index folders
 - [ ] unit tests
-- [ ] reindexing with Index should be atomic
 - [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
 - [ ] command line
     - [x] config file
