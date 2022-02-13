@@ -122,8 +122,8 @@ func (i *Indexer) Index() error {
 			return err
 		}
 
-		// combine indexing walkFunc last
-		fn := walker.Combine(filtersWalkFunc, indexWalkFunc)
+		// combine index walkFunc last
+		fn := walker.Chain(filtersWalkFunc, indexWalkFunc)
 
 		err = walker.Walk(path, fn)
 		// TODO: change to not fail fast

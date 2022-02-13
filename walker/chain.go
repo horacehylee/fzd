@@ -2,9 +2,9 @@ package walker
 
 import "errors"
 
-// Combine to combine multiple WalkFuncs to one WalkFunc
+// Chain to combine multiple WalkFuncs to one WalkFunc
 // If one of the WalkFunc returned SkipThis, then WalkFunc chain will terminate early
-func Combine(walkFuncs ...WalkFunc) WalkFunc {
+func Chain(walkFuncs ...WalkFunc) WalkFunc {
 	return func(path string, info FileInfo, err error) error {
 		for _, f := range walkFuncs {
 			err = f(path, info, err)

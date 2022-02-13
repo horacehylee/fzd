@@ -106,5 +106,5 @@ func newFiltersWalkFunc(root string, option LocationOption) (walker.WalkFunc, er
 		}
 		walkFuncs = append(walkFuncs, ignoreWalkFunc)
 	}
-	return walker.Combine(walkFuncs...), nil
+	return walker.Chain(walkFuncs...), nil
 }

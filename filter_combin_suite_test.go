@@ -15,7 +15,7 @@ func (suite *FilterTestSuite) TestNoFilter() {
 	fn, err := newFiltersWalkFunc(root, LocationOption{})
 	assert.NoError(t, err)
 
-	fn = walker.Combine(fn, suite.visitedWalkFunc)
+	fn = walker.Chain(fn, suite.visitedWalkFunc)
 	walker.Walk(root, fn)
 	assert.Equal(t, []string{
 		suite.level0Dir,
@@ -42,7 +42,7 @@ func (suite *FilterTestSuite) TestTopAndDirFilters() {
 		})
 		assert.NoError(t, err)
 
-		fn = walker.Combine(fn, suite.visitedWalkFunc)
+		fn = walker.Chain(fn, suite.visitedWalkFunc)
 		walker.Walk(root, fn)
 		assert.Equal(t, []string{
 			suite.level0Dir,
@@ -66,7 +66,7 @@ func (suite *FilterTestSuite) TestTopAndNotDirFilters() {
 		})
 		assert.NoError(t, err)
 
-		fn = walker.Combine(fn, suite.visitedWalkFunc)
+		fn = walker.Chain(fn, suite.visitedWalkFunc)
 		walker.Walk(root, fn)
 		assert.Equal(t, []string{
 			suite.level0Dir,
@@ -90,7 +90,7 @@ func (suite *FilterTestSuite) TestDirAndNotDirFilters() {
 		})
 		assert.NoError(t, err)
 
-		fn = walker.Combine(fn, suite.visitedWalkFunc)
+		fn = walker.Chain(fn, suite.visitedWalkFunc)
 		walker.Walk(root, fn)
 		assert.Equal(t, []string{
 			suite.level0Dir,
@@ -114,7 +114,7 @@ func (suite *FilterTestSuite) TestDirAndTopAndIgnoreFilters() {
 		})
 		assert.NoError(t, err)
 
-		fn = walker.Combine(fn, suite.visitedWalkFunc)
+		fn = walker.Chain(fn, suite.visitedWalkFunc)
 		walker.Walk(root, fn)
 		assert.Empty(t, suite.visited)
 	}

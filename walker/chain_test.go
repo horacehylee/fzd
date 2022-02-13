@@ -36,7 +36,7 @@ func newMockFileInfo(name string, mode fs.FileMode, isDir bool) *mockFileinfo {
 	}
 }
 
-func TestCombine(t *testing.T) {
+func TestChain(t *testing.T) {
 	called := make([]string, 0)
 
 	w1 := func(path string, info walker.FileInfo, err error) error {
@@ -49,7 +49,7 @@ func TestCombine(t *testing.T) {
 		assert.Equal(t, len(called), 2)
 		return nil
 	}
-	fn := walker.Combine(w1, w2)
+	fn := walker.Chain(w1, w2)
 
 	path := "/test"
 	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
@@ -59,7 +59,7 @@ func TestCombine(t *testing.T) {
 	assert.Equal(t, []string{path, path}, called)
 }
 
-func TestCombineSecondIsSkippedIfFirstReturnedSkipThis(t *testing.T) {
+func TestChainSecondIsSkippedIfFirstReturnedSkipThis(t *testing.T) {
 	called := make([]string, 0)
 
 	w1 := func(path string, info walker.FileInfo, err error) error {
@@ -71,7 +71,7 @@ func TestCombineSecondIsSkippedIfFirstReturnedSkipThis(t *testing.T) {
 		assert.Fail(t, "should not be called")
 		return nil
 	}
-	fn := walker.Combine(w1, w2)
+	fn := walker.Chain(w1, w2)
 
 	path := "/test"
 	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
@@ -81,7 +81,7 @@ func TestCombineSecondIsSkippedIfFirstReturnedSkipThis(t *testing.T) {
 	assert.Equal(t, []string{path}, called)
 }
 
-func TestCombineSecondIsNotSkippedIfFirstReturnedOtherError(t *testing.T) {
+func TestChainSecondIsNotSkippedIfFirstReturnedOtherError(t *testing.T) {
 	e := errors.New("test error")
 	called := make([]string, 0)
 
@@ -97,7 +97,7 @@ func TestCombineSecondIsNotSkippedIfFirstReturnedOtherError(t *testing.T) {
 		assert.Equal(t, e, err)
 		return err
 	}
-	fn := walker.Combine(w1, w2)
+	fn := walker.Chain(w1, w2)
 
 	path := "/test"
 	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
@@ -107,7 +107,7 @@ func TestCombineSecondIsNotSkippedIfFirstReturnedOtherError(t *testing.T) {
 	assert.Equal(t, []string{path, path}, called)
 }
 
-func TestCombineSecondErrorIsReturnedInsteadOfFirstError(t *testing.T) {
+func TestChainSecondErrorIsReturnedInsteadOfFirstError(t *testing.T) {
 	e1 := errors.New("test error 1")
 	e2 := errors.New("test error 2")
 	called := make([]string, 0)
@@ -124,7 +124,7 @@ func TestCombineSecondErrorIsReturnedInsteadOfFirstError(t *testing.T) {
 		assert.Equal(t, e1, err)
 		return e2
 	}
-	fn := walker.Combine(w1, w2)
+	fn := walker.Chain(w1, w2)
 
 	path := "/test"
 	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
@@ -134,7 +134,7 @@ func TestCombineSecondErrorIsReturnedInsteadOfFirstError(t *testing.T) {
 	assert.Equal(t, []string{path, path}, called)
 }
 
-func TestCombineReturnSameErrorIfCombinedDifferently(t *testing.T) {
+func TestChainReturnSameErrorIfCombinedDifferently(t *testing.T) {
 	e1 := errors.New("test error 1")
 	e2 := errors.New("test error 2")
 	e3 := errors.New("test error 3")
@@ -171,9 +171,9 @@ func TestCombineReturnSameErrorIfCombinedDifferently(t *testing.T) {
 	called1 := &called{calls: make([]string, 0)}
 	called2 := &called{calls: make([]string, 0)}
 	called3 := &called{calls: make([]string, 0)}
-	fn1 := walker.Combine(w1(called1), w2(called1), w3(called1))
-	fn2 := walker.Combine(w1(called2), walker.Combine(w2(called2), w3(called2)))
-	fn3 := walker.Combine(walker.Combine(w1(called3), w2(called3)), w3(called3))
+	fn1 := walker.Chain(w1(called1), w2(called1), w3(called1))
+	fn2 := walker.Chain(w1(called2), walker.Chain(w2(called2), w3(called2)))
+	fn3 := walker.Chain(walker.Chain(w1(called3), w2(called3)), w3(called3))
 
 	path := "/test"
 	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
@@ -190,7 +190,7 @@ func TestCombineReturnSameErrorIfCombinedDifferently(t *testing.T) {
 	assert.Equal(t, called2, called3)
 }
 
-func TestCombineSkipEquallyIfCombinedDifferentlyForFirst(t *testing.T) {
+func TestChainSkipEquallyIfCombinedDifferentlyForFirst(t *testing.T) {
 	type called struct {
 		calls []string
 	}
@@ -219,9 +219,9 @@ func TestCombineSkipEquallyIfCombinedDifferentlyForFirst(t *testing.T) {
 	called1 := &called{calls: make([]string, 0)}
 	called2 := &called{calls: make([]string, 0)}
 	called3 := &called{calls: make([]string, 0)}
-	fn1 := walker.Combine(w1(called1), w2(called1), w3(called1))
-	fn2 := walker.Combine(w1(called2), walker.Combine(w2(called2), w3(called2)))
-	fn3 := walker.Combine(walker.Combine(w1(called3), w2(called3)), w3(called3))
+	fn1 := walker.Chain(w1(called1), w2(called1), w3(called1))
+	fn2 := walker.Chain(w1(called2), walker.Chain(w2(called2), w3(called2)))
+	fn3 := walker.Chain(walker.Chain(w1(called3), w2(called3)), w3(called3))
 
 	path := "/test"
 	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
@@ -238,7 +238,7 @@ func TestCombineSkipEquallyIfCombinedDifferentlyForFirst(t *testing.T) {
 	assert.Equal(t, called2, called3)
 }
 
-func TestCombineSkipEquallyIfCombinedDifferentlyForSecond(t *testing.T) {
+func TestChainSkipEquallyIfCombinedDifferentlyForSecond(t *testing.T) {
 	e1 := errors.New("test error 1")
 
 	type called struct {
@@ -271,9 +271,9 @@ func TestCombineSkipEquallyIfCombinedDifferentlyForSecond(t *testing.T) {
 	called1 := &called{calls: make([]string, 0)}
 	called2 := &called{calls: make([]string, 0)}
 	called3 := &called{calls: make([]string, 0)}
-	fn1 := walker.Combine(w1(called1), w2(called1), w3(called1))
-	fn2 := walker.Combine(w1(called2), walker.Combine(w2(called2), w3(called2)))
-	fn3 := walker.Combine(walker.Combine(w1(called3), w2(called3)), w3(called3))
+	fn1 := walker.Chain(w1(called1), w2(called1), w3(called1))
+	fn2 := walker.Chain(w1(called2), walker.Chain(w2(called2), w3(called2)))
+	fn3 := walker.Chain(walker.Chain(w1(called3), w2(called3)), w3(called3))
 
 	path := "/test"
 	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)

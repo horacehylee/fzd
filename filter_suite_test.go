@@ -75,7 +75,7 @@ func (suite *FilterTestSuite) TestTopFilter() {
 	t := suite.T()
 
 	root := suite.level0Dir
-	fn := walker.Combine(
+	fn := walker.Chain(
 		withTopFilter(root),
 		suite.visitedWalkFunc,
 	)
@@ -91,7 +91,7 @@ func (suite *FilterTestSuite) TestDirFilter() {
 	t := suite.T()
 
 	root := suite.level0Dir
-	fn := walker.Combine(
+	fn := walker.Chain(
 		withDirFilter(),
 		suite.visitedWalkFunc,
 	)
@@ -107,7 +107,7 @@ func (suite *FilterTestSuite) TestNotDirFilter() {
 	t := suite.T()
 
 	root := suite.level0Dir
-	fn := walker.Combine(
+	fn := walker.Chain(
 		withNotDirFilter(root),
 		suite.visitedWalkFunc,
 	)
@@ -126,7 +126,7 @@ func (suite *FilterTestSuite) TestIgnoreFilter() {
 	ignorerWalkFunc, err := withIgnoreFilter("level1")
 	assert.NoError(t, err)
 
-	fn := walker.Combine(
+	fn := walker.Chain(
 		ignorerWalkFunc,
 		suite.visitedWalkFunc,
 	)
