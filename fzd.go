@@ -3,22 +3,29 @@ package fzd
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/blevesearch/bleve/v2"
-	"github.com/blevesearch/bleve/v2/analysis/analyzer/custom"
-	"github.com/blevesearch/bleve/v2/analysis/tokenizer/regexp"
-	"github.com/blevesearch/bleve/v2/mapping"
+	"github.com/google/uuid"
 	"github.com/horacehylee/fzd/walker"
 )
 
-var (
-	errIndexNotInitialized = errors.New("index is not initilized")
+const (
+	headFile = "HEAD"
 )
 
+var (
+	errIndexNotOpened        = errors.New("index is not opened")
+	ErrIndexHeadDoesNotExist = fmt.Errorf("cannot open index, %v file does not exist", headFile)
+)
+
+// Indexer manages file path indexes, which provides atomic reindex swapping
 type Indexer struct {
-	locations map[string]LocationOption
-	path      string
-	index     bleve.Index
+	locations  map[string]LocationOption
+	basePath   string
+	index      bleve.Index
+	indexAlias bleve.IndexAlias
 }
 
 // LocationOption of options on traversing the specified directory location tree
@@ -42,79 +49,75 @@ func WithLocation(path string, option LocationOption) IndexerOption {
 	}
 }
 
-func NewIndexer(path string, options ...IndexerOption) (*Indexer, error) {
-	if path == "" {
-		return nil, fmt.Errorf("path cannot be empty")
+// NewIndexer with specified base path and list of IndexerOptions
+func NewIndexer(basePath string, options ...IndexerOption) (*Indexer, error) {
+	if basePath == "" {
+		return nil, fmt.Errorf("base path cannot be empty")
 	}
 	i := &Indexer{
 		locations: make(map[string]LocationOption),
-		path:      path,
+		basePath:  basePath,
 	}
 	for _, option := range options {
 		option(i)
 	}
-	index, err := newIndex(i.path)
-	if err != nil {
-		return nil, err
-	}
-	i.index = index
 	return i, nil
 }
 
-func newIndex(path string) (bleve.Index, error) {
+func (i *Indexer) Open() error {
+	headPath := filepath.Join(i.basePath, headFile)
+	if _, err := os.Stat(headPath); errors.Is(err, os.ErrNotExist) {
+		return ErrIndexHeadDoesNotExist
+	}
+	// read HEAD file for index name
+	content, err := os.ReadFile(headPath)
+	if err != nil {
+		return fmt.Errorf("failed to read %v: %w", headPath, err)
+	}
+	name := string(content)
+	return i.open(name)
+}
+
+func (i *Indexer) open(name string) error {
+	path := filepath.Join(i.basePath, name)
 	index, err := bleve.Open(path)
 	if err != nil {
-		if errors.Is(err, bleve.ErrorIndexPathDoesNotExist) {
-			mapping, err := newIndexMapping()
-			if err != nil {
-				return nil, err
-			}
-			return bleve.New(path, mapping)
-		} else {
-			return nil, err
-		}
+		return fmt.Errorf("could not open %v specified by %v: %w", path, headFile, err)
 	}
-	return index, nil
+
+	if i.indexAlias == nil {
+		i.indexAlias = bleve.NewIndexAlias()
+		i.indexAlias.Add(index)
+	} else {
+		in := []bleve.Index{index}
+		out := []bleve.Index{i.index}
+		i.indexAlias.Swap(in, out)
+
+		// close old index
+		// return this closing error after index pointer is updated
+		err = i.index.Close()
+	}
+	i.index = index
+	return err
 }
 
-func newIndexMapping() (*mapping.IndexMappingImpl, error) {
-	mapping := bleve.NewIndexMapping()
-
-	// TODO: may have config for custom tokenizer regexp (not limiting for undescore one)
-	tokenizerName := "custom_tokenizer"
-	analyzerName := "custom_analyzer"
-	err := mapping.AddCustomTokenizer(tokenizerName,
-		map[string]interface{}{
-			"type":   regexp.Name,
-			"regexp": `[^\W_]+`,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = mapping.AddCustomAnalyzer(analyzerName,
-		map[string]interface{}{
-			"type":      custom.Name,
-			"tokenizer": tokenizerName,
-		})
-	if err != nil {
-		return nil, err
-	}
-	mapping.DefaultAnalyzer = analyzerName
-	return mapping, nil
-}
-
-// TODO: Index should be atomic, and refresh from scratch for all files
+// Index will atomic swap with index from scratch for all file entries if one is already opened
 // Such that files generations and deletions are not required to be tracked
-// May use bleve.Builder instead (https://github.com/blevesearch/bleve/blob/v2.3.0/index/scorch/builder.go#L45)
 func (i *Indexer) Index() error {
+	name := uuid.NewString()
+	newIndexPath := filepath.Join(i.basePath, name)
+	mapping, err := newIndexMapping()
+	if err != nil {
+		return err
+	}
+	config := make(map[string]interface{})
+	b, err := bleve.NewBuilder(newIndexPath, mapping, config)
+	if err != nil {
+		return err
+	}
+
 	for path, option := range i.locations {
-		b := i.index.NewBatch()
-		indexWalkFunc, err := i.newIndexWalkFunc(b)
-		if err != nil {
-			return err
-		}
+		indexWalkFunc := newIndexWalkFunc(b)
 
 		filtersWalkFunc, err := newFiltersWalkFunc(path, option)
 		// TODO: change to not fail fast
@@ -130,46 +133,75 @@ func (i *Indexer) Index() error {
 		if err != nil {
 			return fmt.Errorf("failed to traverse path: %w", err)
 		}
+	}
 
-		err = i.index.Batch(b)
-		// TODO: change to not fail fast
+	err = b.Close()
+	// err := i.index.Batch(b)
+	// TODO: change to not fail fast
+	if err != nil {
+		return fmt.Errorf("failed to execute index batch: %w", err)
+	}
+
+	// HEAD file update to new index
+	headPath := filepath.Join(i.basePath, headFile)
+	f, err := os.OpenFile(headPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return fmt.Errorf("failed to open %v file: %w", headFile, err)
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(name)
+	if err != nil {
+		return fmt.Errorf("failed to write to %v file: %w", headFile, err)
+	}
+	err = f.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close %v file: %w", headFile, err)
+	}
+
+	// If other index is opened, swap to the new index instead atomically and close it
+	err = i.open(name)
+	if err != nil {
+		return err
+	}
+
+	// Clean up old indexes
+	entries, err := os.ReadDir(i.basePath)
+	if err != nil {
+		return fmt.Errorf("failed to read %v: %w", i.basePath, err)
+	}
+	for _, e := range entries {
+		if e.Name() == headFile || e.Name() == name {
+			continue
+		}
+		p := filepath.Join(i.basePath, e.Name())
+		err = os.RemoveAll(p)
 		if err != nil {
-			return fmt.Errorf("failed to execute index batch: %w", err)
+			return fmt.Errorf("failed to clean up %v: %w", p, err)
 		}
 	}
 	return nil
 }
 
-func (i *Indexer) newIndexWalkFunc(b *bleve.Batch) (walker.WalkFunc, error) {
-	if i.index == nil {
-		return nil, errIndexNotInitialized
-	}
-	fn := func(path string, info walker.FileInfo, err error) error {
-		// fmt.Printf("%s %s\n", info.Mode(), path)
-		// return nil
-
-		// return i.index.Index(path, path)
-		return b.Index(path, path)
-	}
-	return fn, nil
-}
-
 func (i *Indexer) DocCount() (uint64, error) {
-	if i.index == nil {
-		return 0, errIndexNotInitialized
+	if i.indexAlias == nil {
+		return 0, errIndexNotOpened
 	}
-	return i.index.DocCount()
+	return i.indexAlias.DocCount()
 }
 
 func (i *Indexer) Close() error {
-	if i.index == nil {
+	if i.indexAlias == nil {
 		// index not initialized, no need close
 		return nil
 	}
-	return i.index.Close()
+	return i.indexAlias.Close()
 }
 
 func (i *Indexer) Search(term string) (*bleve.SearchResult, error) {
+	if i.indexAlias == nil {
+		return nil, errIndexNotOpened
+	}
 	// TODO: may have configuration to allow tweak of these settings
 	queryString := bleve.NewQueryStringQuery(term)
 
@@ -187,5 +219,5 @@ func (i *Indexer) Search(term string) (*bleve.SearchResult, error) {
 
 	union := bleve.NewDisjunctionQuery(fuzzy, prefix, queryString, wildcard, match)
 	req := bleve.NewSearchRequest(union)
-	return i.index.Search(req)
+	return i.indexAlias.Search(req)
 }

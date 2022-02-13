@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"os"
 
 	"github.com/horacehylee/fzd"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -22,25 +24,50 @@ func main() {
 
 	var options []fzd.IndexerOption
 	for _, l := range c.Locations {
-		path := os.ExpandEnv(l.Path)
 		locationOption := fzd.LocationOption{
 			Filters: l.Filters,
 			Ignores: l.Ignores,
 		}
-		options = append(options, fzd.WithLocation(path, locationOption))
+		options = append(options, fzd.WithLocation(l.Path, locationOption))
 	}
 
-	indexer, err := fzd.NewIndexer("fzd.bleve", options...)
+	indexer, err := fzd.NewIndexer(c.Index.BasePath, options...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer indexer.Close()
+
+	err = indexer.Open()
+	if err != nil {
+		if errors.Is(err, fzd.ErrIndexHeadDoesNotExist) {
+			log.Info("==============")
+			log.Info("Setup Index")
+			log.Info("==============")
+			err = indexer.Index()
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			log.Fatal(err)
+		}
+	}
+
+	log.Info("==============")
+	log.Info("Before Reindex")
+	log.Info("==============")
+	check(indexer, log, term)
 
 	err = indexer.Index()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	log.Info("==============")
+	log.Info("After Reindex")
+	log.Info("==============")
+	check(indexer, log, term)
+}
+
+func check(indexer *fzd.Indexer, log *logrus.Logger, term string) {
 	count, err := indexer.DocCount()
 	if err != nil {
 		log.Fatal(err)

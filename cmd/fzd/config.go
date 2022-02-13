@@ -3,12 +3,16 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/horacehylee/fzd"
 	"github.com/spf13/viper"
 )
 
 type config struct {
+	Index struct {
+		BasePath string
+	}
 	Locations []struct {
 		Path    string
 		Filters []fzd.Filter
@@ -20,7 +24,9 @@ func newConfig() (config, error) {
 	viper.SetConfigName(".fzd")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("$HOME")
+	viper.AddConfigPath("$HOME/.fzd")
+
+	viper.SetDefault("index.basepath", "$HOME/.fzd/indexes")
 
 	err := viper.ReadInConfig()
 	if err != nil {
@@ -29,7 +35,18 @@ func newConfig() (config, error) {
 			return config{}, fmt.Errorf("could not read config: %w", err)
 		}
 	}
-	return parseConfig()
+	var c config
+	err = c.parse()
+	if err != nil {
+		return config{}, err
+	}
+
+	err = c.validate()
+	if err != nil {
+		return config{}, err
+	}
+
+	return c, nil
 
 	// TODO: help user write an example config
 	// err = viper.SafeWriteConfig()
@@ -42,8 +59,20 @@ func newConfig() (config, error) {
 	// return config
 }
 
-func parseConfig() (config, error) {
-	var config config
-	err := viper.Unmarshal(&config)
-	return config, err
+func (c *config) parse() error {
+	err := viper.Unmarshal(c)
+	if err != nil {
+		return err
+	}
+
+	c.Index.BasePath = os.ExpandEnv(c.Index.BasePath)
+	for i := range c.Locations {
+		c.Locations[i].Path = os.ExpandEnv(c.Locations[i].Path)
+	}
+	return nil
+}
+
+func (c *config) validate() error {
+	// TODO: check all mandatory fields
+	return nil
 }
