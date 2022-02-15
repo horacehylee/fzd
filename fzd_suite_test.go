@@ -301,6 +301,14 @@ func (suite *FzdTestSuite) TestDocCount() {
 	assert.Equal(t, uint64(6), count)
 }
 
+func (suite *FzdTestSuite) TestDocCountReturnsErrorIfNotOpened() {
+	t := suite.T()
+	indexer := suite.indexer
+
+	_, err := indexer.DocCount()
+	assert.ErrorIs(t, err, fzd.ErrIndexNotOpened)
+}
+
 func (suite *FzdTestSuite) TestSearch() {
 	t := suite.T()
 	indexer := suite.indexer
@@ -370,6 +378,14 @@ func (suite *FzdTestSuite) TestSearchAndDocCountAfterIndexSwapped() {
 	}, hits2)
 }
 
+func (suite *FzdTestSuite) TestSearchReturnsErrorIfNotOpened() {
+	t := suite.T()
+	indexer := suite.indexer
+
+	_, err := indexer.Search("txt")
+	assert.ErrorIs(t, err, fzd.ErrIndexNotOpened)
+}
+
 func (suite *FzdTestSuite) TestClose() {
 	t := suite.T()
 	indexer := suite.indexer
@@ -399,6 +415,14 @@ func (suite *FzdTestSuite) TestClose() {
 		fzd.HeadFileName,
 		name2,
 	}, dirnames2, "other indexes should be removed and cleaned up")
+}
+
+func (suite *FzdTestSuite) TestCloseNoErrorIfNotOpened() {
+	t := suite.T()
+	indexer := suite.indexer
+
+	err := indexer.Close()
+	assert.NoError(t, err)
 }
 
 func (suite *FzdTestSuite) TestIndexRace() {

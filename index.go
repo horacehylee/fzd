@@ -75,3 +75,57 @@ func removeIndexesExclude(basePath string, name string) error {
 	}
 	return nil
 }
+
+// Wrapper of bleve.IndexAlias for single index alias
+type singleIndexAlias struct {
+	alias bleve.IndexAlias
+	index bleve.Index
+}
+
+func newSingleIndexAlias(index bleve.Index) *singleIndexAlias {
+	return &singleIndexAlias{
+		alias: bleve.NewIndexAlias(index),
+		index: index,
+	}
+}
+
+func (s *singleIndexAlias) name() string {
+	if s.index == nil {
+		return ""
+	}
+	return s.index.Name()
+}
+
+func (s *singleIndexAlias) close() error {
+	var indexCloseErr error
+	if s.index != nil {
+		indexCloseErr = s.index.Close()
+	}
+	var indexAliasCloseErr error
+	if s.alias != nil {
+		indexAliasCloseErr = s.alias.Close()
+	}
+	if indexCloseErr != nil || indexAliasCloseErr != nil {
+		return fmt.Errorf("failed index close: %v, or failed index alias close: %v", indexCloseErr, indexAliasCloseErr)
+	}
+	return nil
+}
+
+func (s *singleIndexAlias) swap(in bleve.Index) {
+	ins := []bleve.Index{in}
+	outs := []bleve.Index{s.index}
+	s.index = in
+	s.alias.Swap(ins, outs)
+}
+
+func (s *singleIndexAlias) get() bleve.Index {
+	return s.index
+}
+
+func (s *singleIndexAlias) docCount() (uint64, error) {
+	return s.alias.DocCount()
+}
+
+func (s *singleIndexAlias) search(req *bleve.SearchRequest) (*bleve.SearchResult, error) {
+	return s.alias.Search(req)
+}

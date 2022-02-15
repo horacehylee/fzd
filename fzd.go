@@ -20,12 +20,11 @@ var (
 
 // Indexer manages file path indexes, which provides atomic reindex swapping
 type Indexer struct {
-	locations  map[string]LocationOption
-	basePath   string
-	index      bleve.Index
-	indexAlias bleve.IndexAlias
-	mutex      sync.RWMutex
-	open       bool
+	locations map[string]LocationOption
+	basePath  string
+	index     *singleIndexAlias
+	mutex     sync.RWMutex
+	open      bool
 }
 
 // LocationOption of options on traversing the specified directory location tree
@@ -85,7 +84,7 @@ func (i *Indexer) OpenAndSwap(name string) error {
 	i.mutex.Lock()
 	defer i.mutex.Unlock()
 
-	if i.index == nil || i.index.Name() != name {
+	if i.index == nil || i.index.name() != name {
 		// if same index is passed, no need to update HEAD and swap index
 		err := writeHead(i.basePath, name)
 		if err != nil {
@@ -99,9 +98,9 @@ func (i *Indexer) OpenAndSwap(name string) error {
 	return nil
 }
 
+// Caller of openAndSwap should acquire Write lock of mutex to be concurrent-safe
 func (i *Indexer) openAndSwap(name string) error {
-	prev := i.index
-	if prev != nil && prev.Name() == name {
+	if i.index != nil && i.index.name() == name {
 		// do nothing if index with same name is loaded
 		return nil
 	}
@@ -113,14 +112,11 @@ func (i *Indexer) openAndSwap(name string) error {
 	}
 	index.SetName(name)
 
-	i.index = index
-	if i.indexAlias == nil {
-		i.indexAlias = bleve.NewIndexAlias()
-		i.indexAlias.Add(index)
+	if i.index == nil {
+		i.index = newSingleIndexAlias(index)
 	} else {
-		in := []bleve.Index{index}
-		out := []bleve.Index{prev}
-		i.indexAlias.Swap(in, out)
+		prev := i.index.get()
+		i.index.swap(index)
 
 		// close previous index
 		err = prev.Close()
@@ -181,10 +177,10 @@ func (i *Indexer) DocCount() (uint64, error) {
 	i.mutex.RLock()
 	defer i.mutex.RUnlock()
 
-	if i.indexAlias == nil || !i.open {
+	if i.index == nil || !i.open {
 		return 0, ErrIndexNotOpened
 	}
-	return i.indexAlias.DocCount()
+	return i.index.docCount()
 }
 
 // Search index with specified term and returns search result accordingly
@@ -192,7 +188,7 @@ func (i *Indexer) Search(term string) (*bleve.SearchResult, error) {
 	i.mutex.RLock()
 	defer i.mutex.RUnlock()
 
-	if i.indexAlias == nil || !i.open {
+	if i.index == nil || !i.open {
 		return nil, ErrIndexNotOpened
 	}
 	// TODO: may have configuration to allow tweak of these settings
@@ -212,7 +208,7 @@ func (i *Indexer) Search(term string) (*bleve.SearchResult, error) {
 
 	union := bleve.NewDisjunctionQuery(fuzzy, prefix, queryString, wildcard, match)
 	req := bleve.NewSearchRequest(union)
-	return i.indexAlias.Search(req)
+	return i.index.search(req)
 }
 
 // IndexName returns current loaded index name
@@ -224,7 +220,7 @@ func (i *Indexer) IndexName() (string, error) {
 	if i.index == nil || !i.open {
 		return "", ErrIndexNotOpened
 	}
-	return i.index.Name(), nil
+	return i.index.name(), nil
 }
 
 // Close currently opened index
@@ -236,20 +232,14 @@ func (i *Indexer) Close() error {
 	if !i.open {
 		return nil
 	}
-	var indexCloseErr error
-	if i.index != nil {
-		indexCloseErr = i.index.Close()
-	}
-	var indexAliasCloseErr error
-	if i.indexAlias != nil {
-		indexAliasCloseErr = i.indexAlias.Close()
-	}
-	if indexCloseErr != nil || indexAliasCloseErr != nil {
-		return fmt.Errorf("failed index close: %v, or failed index alias close: %v", indexCloseErr, indexAliasCloseErr)
+
+	err := i.index.close()
+	if err != nil {
+		return err
 	}
 
-	name := i.index.Name()
-	err := removeIndexesExclude(i.basePath, name)
+	name := i.index.name()
+	err = removeIndexesExclude(i.basePath, name)
 	if err != nil {
 		return fmt.Errorf("failed to remove unused indexes: %w", err)
 	}
