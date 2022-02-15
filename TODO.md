@@ -16,6 +16,8 @@
         - [x] swap index with index alias
         - [x] close the old index and clean up all other index folders
 - [ ] unit tests
+- [ ] refactoring
+    - [ ] have custom index alias struct, so no need extra index reference inside indexer
 - [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
 - [ ] command line
     - [x] config file
