@@ -42,7 +42,11 @@ func main() {
 			log.Info("==============")
 			log.Info("Setup Index")
 			log.Info("==============")
-			err = indexer.Index()
+			name, err := indexer.Index()
+			if err != nil {
+				log.Fatal(err)
+			}
+			err = indexer.OpenAndSwap(name)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -56,7 +60,11 @@ func main() {
 	log.Info("==============")
 	check(indexer, log, term)
 
-	err = indexer.Index()
+	name, err := indexer.Index()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = indexer.OpenAndSwap(name)
 	if err != nil {
 		log.Fatal(err)
 	}

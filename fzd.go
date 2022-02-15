@@ -3,21 +3,19 @@ package fzd
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/blevesearch/bleve/v2"
-	"github.com/google/uuid"
 	"github.com/horacehylee/fzd/walker"
 )
 
-const (
-	headFile = "HEAD"
-)
-
 var (
-	errIndexNotOpened        = errors.New("index is not opened")
-	ErrIndexHeadDoesNotExist = fmt.Errorf("cannot open index, %v file does not exist", headFile)
+	// Error where index is not opened
+	ErrIndexNotOpened = errors.New("index is not opened")
+
+	// Error where HEAD file does not exists, it should only occur when opened without previously indexed
+	ErrIndexHeadDoesNotExist = fmt.Errorf("cannot open index, %v file does not exist", HeadFileName)
 )
 
 // Indexer manages file path indexes, which provides atomic reindex swapping
@@ -26,6 +24,8 @@ type Indexer struct {
 	basePath   string
 	index      bleve.Index
 	indexAlias bleve.IndexAlias
+	mutex      sync.RWMutex
+	open       bool
 }
 
 // LocationOption of options on traversing the specified directory location tree
@@ -64,65 +64,99 @@ func NewIndexer(basePath string, options ...IndexerOption) (*Indexer, error) {
 	return i, nil
 }
 
+// Open HEAD file specified index to be available for search and querying
+// If HEAD file is not found, ErrIndexHeadDoesNotExist will returned
+// If already opened, open again will simply check for the latest index specified in HEAD file and swap for it
 func (i *Indexer) Open() error {
-	headPath := filepath.Join(i.basePath, headFile)
-	if _, err := os.Stat(headPath); errors.Is(err, os.ErrNotExist) {
-		return ErrIndexHeadDoesNotExist
-	}
-	// read HEAD file for index name
-	content, err := os.ReadFile(headPath)
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+
+	name, err := readHead(i.basePath)
 	if err != nil {
-		return fmt.Errorf("failed to read %v: %w", headPath, err)
+		return err
 	}
-	name := string(content)
-	return i.open(name)
+	return i.openAndSwap(name)
 }
 
-func (i *Indexer) open(name string) error {
+// OpenAndSwap writes specified index to HEAD file, open and swap it with current index
+// If same named index is already opened, only HEAD file will be overwritten again, no index will be swapped
+// If no index is loaded, it will create/update HEAD file with specified index, open and load it
+func (i *Indexer) OpenAndSwap(name string) error {
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+
+	if i.index == nil || i.index.Name() != name {
+		// if same index is passed, no need to update HEAD and swap index
+		err := writeHead(i.basePath, name)
+		if err != nil {
+			return err
+		}
+		err = i.openAndSwap(name)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (i *Indexer) openAndSwap(name string) error {
+	prev := i.index
+	if prev != nil && prev.Name() == name {
+		// do nothing if index with same name is loaded
+		return nil
+	}
+
 	path := filepath.Join(i.basePath, name)
 	index, err := bleve.Open(path)
 	if err != nil {
-		return fmt.Errorf("could not open %v specified by %v: %w", path, headFile, err)
+		return fmt.Errorf("could not open %v specified by %v: %w", path, HeadFileName, err)
 	}
+	index.SetName(name)
 
+	i.index = index
 	if i.indexAlias == nil {
 		i.indexAlias = bleve.NewIndexAlias()
 		i.indexAlias.Add(index)
 	} else {
 		in := []bleve.Index{index}
-		out := []bleve.Index{i.index}
+		out := []bleve.Index{prev}
 		i.indexAlias.Swap(in, out)
 
-		// close old index
-		// return this closing error after index pointer is updated
-		err = i.index.Close()
+		// close previous index
+		err = prev.Close()
+		if err != nil {
+			return fmt.Errorf("failed to close previous index: %w", err)
+		}
 	}
-	i.index = index
-	return err
+	i.open = true
+	return nil
 }
 
-// Index will atomic swap with index from scratch for all file entries if one is already opened
+// Index will create new index from scratch for all file entries
 // Such that files generations and deletions are not required to be tracked
-func (i *Indexer) Index() error {
-	name := uuid.NewString()
+// To use newly created index, use OpenAndSwap with returned index name
+func (i *Indexer) Index() (string, error) {
+	// no mutex locking is needed, as it will create a new index
+	name := newIndexName()
+
 	newIndexPath := filepath.Join(i.basePath, name)
 	mapping, err := newIndexMapping()
 	if err != nil {
-		return err
+		return "", err
 	}
 	config := make(map[string]interface{})
-	b, err := bleve.NewBuilder(newIndexPath, mapping, config)
+	builder, err := bleve.NewBuilder(newIndexPath, mapping, config)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for path, option := range i.locations {
-		indexWalkFunc := newIndexWalkFunc(b)
+		indexWalkFunc := newIndexWalkFunc(builder)
 
 		filtersWalkFunc, err := newFiltersWalkFunc(path, option)
 		// TODO: change to not fail fast
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		// combine index walkFunc last
@@ -131,76 +165,35 @@ func (i *Indexer) Index() error {
 		err = walker.Walk(path, fn)
 		// TODO: change to not fail fast
 		if err != nil {
-			return fmt.Errorf("failed to traverse path: %w", err)
+			return "", fmt.Errorf("failed to traverse path: %w", err)
 		}
 	}
 
-	err = b.Close()
-	// err := i.index.Batch(b)
-	// TODO: change to not fail fast
+	err = builder.Close()
 	if err != nil {
-		return fmt.Errorf("failed to execute index batch: %w", err)
+		return "", fmt.Errorf("failed to execute index batch: %w", err)
 	}
-
-	// HEAD file update to new index
-	headPath := filepath.Join(i.basePath, headFile)
-	f, err := os.OpenFile(headPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return fmt.Errorf("failed to open %v file: %w", headFile, err)
-	}
-	defer f.Close()
-
-	_, err = f.WriteString(name)
-	if err != nil {
-		return fmt.Errorf("failed to write to %v file: %w", headFile, err)
-	}
-	err = f.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close %v file: %w", headFile, err)
-	}
-
-	// If other index is opened, swap to the new index instead atomically and close it
-	err = i.open(name)
-	if err != nil {
-		return err
-	}
-
-	// Clean up old indexes
-	entries, err := os.ReadDir(i.basePath)
-	if err != nil {
-		return fmt.Errorf("failed to read %v: %w", i.basePath, err)
-	}
-	for _, e := range entries {
-		if e.Name() == headFile || e.Name() == name {
-			continue
-		}
-		p := filepath.Join(i.basePath, e.Name())
-		err = os.RemoveAll(p)
-		if err != nil {
-			return fmt.Errorf("failed to clean up %v: %w", p, err)
-		}
-	}
-	return nil
+	return name, nil
 }
 
+// DocCount returns number of documents stored within the index
 func (i *Indexer) DocCount() (uint64, error) {
-	if i.indexAlias == nil {
-		return 0, errIndexNotOpened
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+
+	if i.indexAlias == nil || !i.open {
+		return 0, ErrIndexNotOpened
 	}
 	return i.indexAlias.DocCount()
 }
 
-func (i *Indexer) Close() error {
-	if i.indexAlias == nil {
-		// index not initialized, no need close
-		return nil
-	}
-	return i.indexAlias.Close()
-}
-
+// Search index with specified term and returns search result accordingly
 func (i *Indexer) Search(term string) (*bleve.SearchResult, error) {
-	if i.indexAlias == nil {
-		return nil, errIndexNotOpened
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+
+	if i.indexAlias == nil || !i.open {
+		return nil, ErrIndexNotOpened
 	}
 	// TODO: may have configuration to allow tweak of these settings
 	queryString := bleve.NewQueryStringQuery(term)
@@ -220,4 +213,46 @@ func (i *Indexer) Search(term string) (*bleve.SearchResult, error) {
 	union := bleve.NewDisjunctionQuery(fuzzy, prefix, queryString, wildcard, match)
 	req := bleve.NewSearchRequest(union)
 	return i.indexAlias.Search(req)
+}
+
+// IndexName returns current loaded index name
+// If index not opened, ErrIndexNotOpened is returned
+func (i *Indexer) IndexName() (string, error) {
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+
+	if i.index == nil || !i.open {
+		return "", ErrIndexNotOpened
+	}
+	return i.index.Name(), nil
+}
+
+// Close currently opened index
+// Except currently opened one (specified by HEAD file), other indexes will be clean up and removed, to keep index path clean
+func (i *Indexer) Close() error {
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+
+	if !i.open {
+		return nil
+	}
+	var indexCloseErr error
+	if i.index != nil {
+		indexCloseErr = i.index.Close()
+	}
+	var indexAliasCloseErr error
+	if i.indexAlias != nil {
+		indexAliasCloseErr = i.indexAlias.Close()
+	}
+	if indexCloseErr != nil || indexAliasCloseErr != nil {
+		return fmt.Errorf("failed index close: %v, or failed index alias close: %v", indexCloseErr, indexAliasCloseErr)
+	}
+
+	name := i.index.Name()
+	err := removeIndexesExclude(i.basePath, name)
+	if err != nil {
+		return fmt.Errorf("failed to remove unused indexes: %w", err)
+	}
+	i.open = false
+	return nil
 }
