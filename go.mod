@@ -6,10 +6,12 @@ require (
 	github.com/blevesearch/bleve/v2 v2.3.0
 	github.com/google/uuid v1.3.0
 	github.com/karrick/godirwalk v1.16.1
+	github.com/manifoldco/promptui v0.9.0
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.0
+	github.com/urfave/cli/v2 v2.3.0
 )
 
 require (
@@ -28,6 +30,8 @@ require (
 	github.com/blevesearch/zapx/v13 v13.3.2 // indirect
 	github.com/blevesearch/zapx/v14 v14.3.2 // indirect
 	github.com/blevesearch/zapx/v15 v15.3.2 // indirect
+	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -38,6 +42,8 @@ require (
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/spf13/afero v1.6.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
