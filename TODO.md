@@ -18,14 +18,12 @@
 - [x] unit tests
 - [x] refactoring
     - [x] have custom index alias struct, so no need extra index reference inside indexer
-- [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
-- [ ] command line
+- [x] command line
     - [x] config file
     - [x] allow resolve of env variable (i.e. $USERNAME)
-    - [ ] commands
-        - [ ] `fzd` -> display status of last indexed time, and prompt if continue to set up the indexes
-        - [ ] `fzd [keyword]` -> search files with the keyword with fuzzy match (distance specified in config)
-        - [ ] `fzd [keyword] --exact` -> exact match for keyword
-        - [ ] `fzd [keyword] --distance/-d [number]` -> search with parameter for distance
-- [ ] documentation
+    - [x] commands
+        - [x] `fzd` -> display status of last indexed time, and prompt if continue to set up the indexes
+        - [x] `fzd [keyword]` -> search files with the keyword with fuzzy match (distance specified in config)
+- [x] documentation
     - [x] example config
+- [ ] review to see if could have more pluggable options (i.e custom ignorer, walker, indexer)
