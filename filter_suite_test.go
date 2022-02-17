@@ -10,6 +10,10 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const (
+	fileMode = 0700
+)
+
 type FilterTestSuite struct {
 	suite.Suite
 	level0Dir       string
@@ -34,23 +38,23 @@ func (suite *FilterTestSuite) SetupSuite() {
 	suite.level0Dir = level0Dir
 
 	suite.level0File = filepath.Join(suite.level0Dir, "level0.txt")
-	err = os.WriteFile(suite.level0File, []byte("content"), 0666)
+	err = os.WriteFile(suite.level0File, []byte("content"), fileMode)
 	assert.NoError(t, err)
 
 	suite.level1Dir = filepath.Join(suite.level0Dir, "level1")
-	err = os.Mkdir(suite.level1Dir, 0666)
+	err = os.Mkdir(suite.level1Dir, fileMode)
 	assert.NoError(t, err)
 
 	suite.level1File = filepath.Join(suite.level1Dir, "level1.txt")
-	err = os.WriteFile(suite.level1File, []byte("content"), 0666)
+	err = os.WriteFile(suite.level1File, []byte("content"), fileMode)
 	assert.NoError(t, err)
 
 	suite.level2Dir = filepath.Join(suite.level1Dir, "level2")
-	err = os.Mkdir(suite.level2Dir, 0666)
+	err = os.Mkdir(suite.level2Dir, fileMode)
 	assert.NoError(t, err)
 
 	suite.level2File = filepath.Join(suite.level2Dir, "level2.txt")
-	err = os.WriteFile(suite.level2File, []byte("content"), 0666)
+	err = os.WriteFile(suite.level2File, []byte("content"), fileMode)
 	assert.NoError(t, err)
 }
 
