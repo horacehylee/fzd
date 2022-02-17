@@ -10,6 +10,10 @@ go install ./cmd/fzd
 
 ## 🛠 Usage
 
+Copy `.fzd.example.yaml` and place it in as `$HOME/.fzd/.fzd.yaml` in your home directory.
+
+Tweak the configurations for your case, may take a look at [detailed configuration list](#%E2%9A%99-configuration).
+
 ```
 $ fzd
 Index is not created yet
