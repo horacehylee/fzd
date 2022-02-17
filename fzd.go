@@ -3,8 +3,10 @@ package fzd
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/blevesearch/bleve/v2"
 	"github.com/horacehylee/fzd/walker"
@@ -211,6 +213,14 @@ func (i *Indexer) Search(term string) (*bleve.SearchResult, error) {
 	return i.index.search(req)
 }
 
+// SearchWith for custom bleve search request for the underlying index
+func (i *Indexer) SearchWith(req *bleve.SearchRequest) (*bleve.SearchResult, error) {
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+
+	return i.index.search(req)
+}
+
 // IndexName returns current loaded index name
 // If index not opened, ErrIndexNotOpened is returned
 func (i *Indexer) IndexName() (string, error) {
@@ -221,6 +231,22 @@ func (i *Indexer) IndexName() (string, error) {
 		return "", ErrIndexNotOpened
 	}
 	return i.index.name(), nil
+}
+
+// LastIndexer returns modification time of the index, as the index will not be updated once indexed
+func (i *Indexer) LastIndexed() (time.Time, error) {
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+
+	if i.index == nil || !i.open {
+		return time.Time{}, ErrIndexNotOpened
+	}
+	path := filepath.Join(i.basePath, i.index.name())
+	info, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("could not check index mod time: %w", err)
+	}
+	return info.ModTime(), nil
 }
 
 // Close currently opened index
