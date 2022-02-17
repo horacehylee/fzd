@@ -50,36 +50,35 @@ func main() {
 }
 
 func statusOrIndex(ctx *cli.Context, c config, indexer *fzd.Indexer) error {
-	err := open(indexer)
+	err := indexer.Open()
 	if err != nil {
-		return err
+		return indexIfNotExists(indexer, err)
 	}
 	t, err := indexer.LastIndexed()
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Index was last indexed at %v\n", t.Format("2006-01-02 15:04"))
-	yes := yesNo("Do you want to reindex it now?")
+	yes := yesNo("Do you want to reindex it now")
 	if !yes {
 		return nil
 	}
 	return index(indexer)
 }
 
-func open(indexer *fzd.Indexer) error {
-	err := indexer.Open()
-	if err != nil {
-		if !errors.Is(err, fzd.ErrIndexHeadDoesNotExist) {
-			return err
-		}
-		fmt.Println("Index is not created yet")
-		yes := yesNo("Do you want to create it now?")
-		if !yes {
-			return nil
-		}
-		return index(indexer)
+func indexIfNotExists(indexer *fzd.Indexer, err error) error {
+	if err == nil {
+		return nil
 	}
-	return nil
+	if !errors.Is(err, fzd.ErrIndexHeadDoesNotExist) {
+		return err
+	}
+	fmt.Println("Index is not created yet")
+	yes := yesNo("Do you want to create it now")
+	if !yes {
+		return nil
+	}
+	return index(indexer)
 }
 
 func index(indexer *fzd.Indexer) error {
@@ -104,9 +103,12 @@ func search(ctx *cli.Context, c config, indexer *fzd.Indexer) error {
 	if term == "" {
 		return fmt.Errorf("term cannot be blank")
 	}
-	err := open(indexer)
+	err := indexer.Open()
 	if err != nil {
-		return err
+		err = indexIfNotExists(indexer, err)
+		if err != nil {
+			return err
+		}
 	}
 	res, err := indexer.Search(term)
 	if err != nil {
