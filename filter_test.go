@@ -42,7 +42,7 @@ func TestTopFilterPassForTopLevelFile(t *testing.T) {
 	fn := withTopFilter(root)
 
 	path := "/level0/level0.txt"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.NoError(t, err)
@@ -53,7 +53,7 @@ func TestTopFilterPassForSamePath(t *testing.T) {
 	fn := withTopFilter(root)
 
 	path := root
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, true)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, true)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.NoError(t, err)
@@ -64,7 +64,7 @@ func TestTopFilterPassForTopLevelDirectory(t *testing.T) {
 	fn := withTopFilter(root)
 
 	path := "/level0/level1"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, true)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, true)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.NoError(t, err)
@@ -75,7 +75,7 @@ func TestTopFilterSkipIfNonTopLevelFile(t *testing.T) {
 	fn := withTopFilter(root)
 
 	path := "/level0/level1/level1.txt"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.Equal(t, walker.SkipThis, err)
@@ -86,7 +86,7 @@ func TestTopFilterReturnsErrorIfPassed(t *testing.T) {
 	fn := withTopFilter(root)
 
 	path := "/level0/level0.txt"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	e := errors.New("test error")
 
 	err := fn(filepath.Clean(path), fileInfo, e)
@@ -98,7 +98,7 @@ func TestTopFilterReturnsErrorIfPassedForNonTopLevelFile(t *testing.T) {
 	fn := withTopFilter(root)
 
 	path := "/level0/level1/level1.txt"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 	e := errors.New("test error")
 	err := fn(filepath.Clean(path), fileInfo, e)
@@ -109,7 +109,7 @@ func TestDirFilterPassForDir(t *testing.T) {
 	fn := withDirFilter()
 
 	path := "/level0"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, true)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, true)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.NoError(t, err)
@@ -119,7 +119,7 @@ func TestDirFilterSkipForFile(t *testing.T) {
 	fn := withDirFilter()
 
 	path := "/level0/level0.txt"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.Equal(t, walker.SkipThis, err)
@@ -129,7 +129,7 @@ func TestDirFilterReturnsErrorIfPassed(t *testing.T) {
 	fn := withDirFilter()
 
 	path := "/level0"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, true)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, true)
 
 	e := errors.New("test error")
 	err := fn(filepath.Clean(path), fileInfo, e)
@@ -140,7 +140,7 @@ func TestDirFilterReturnsErrorIfPassedForFile(t *testing.T) {
 	fn := withDirFilter()
 
 	path := "/level0/level0.txt"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 	e := errors.New("test error")
 	err := fn(filepath.Clean(path), fileInfo, e)
@@ -152,7 +152,7 @@ func TestNotDirFilterForFile(t *testing.T) {
 	fn := withNotDirFilter(root)
 
 	path := "/level0/level0.txt"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.NoError(t, err)
@@ -163,7 +163,7 @@ func TestNotDirFilterForSamePath(t *testing.T) {
 	fn := withNotDirFilter(root)
 
 	path := root
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, true)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, true)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.NoError(t, err)
@@ -174,7 +174,7 @@ func TestNotDirFilterSkipForDir(t *testing.T) {
 	fn := withNotDirFilter(root)
 
 	path := "/level0/level1"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, true)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, true)
 
 	err := fn(filepath.Clean(path), fileInfo, nil)
 	assert.Equal(t, walker.SkipThis, err)
@@ -185,7 +185,7 @@ func TestNotDirFilterReturnsErrorIfPassedForFile(t *testing.T) {
 	fn := withNotDirFilter(root)
 
 	path := "/level0/level0.txt"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 	e := errors.New("test error")
 	err := fn(filepath.Clean(path), fileInfo, e)
@@ -197,7 +197,7 @@ func TestNotDirFilterReturnsErrorIfPassedForDir(t *testing.T) {
 	fn := withNotDirFilter(root)
 
 	path := "/level0/level1"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, true)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, true)
 
 	e := errors.New("test error")
 	err := fn(filepath.Clean(path), fileInfo, e)
@@ -212,7 +212,7 @@ func TestIgnoreFilter(t *testing.T) {
 		"/level0/level0.txt",
 		"/Level1.txt",
 	} {
-		fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+		fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 		err = fn(filepath.Clean(path), fileInfo, nil)
 		assert.Equal(t, walker.SkipThis, err)
@@ -227,7 +227,7 @@ func TestIgnoreFilterPassed(t *testing.T) {
 		"/level0/level0.txt",
 		"/Level1.txt",
 	} {
-		fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+		fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 		err = fn(filepath.Clean(path), fileInfo, nil)
 		assert.NoError(t, err)
@@ -239,7 +239,7 @@ func TestIgnoreFilterReturnsErrorIfPassed(t *testing.T) {
 	assert.NoError(t, err)
 
 	path := "/level0/level1"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, true)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, true)
 
 	e := errors.New("test error")
 	err = fn(filepath.Clean(path), fileInfo, e)

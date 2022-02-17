@@ -31,7 +31,7 @@ func TestIndexWalkFuncIndexFileNameForBothIdandData(t *testing.T) {
 	fn := newIndexWalkFunc(i)
 
 	path := filepath.Clean("/level0/level0.txt")
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 
 	err := fn(path, fileInfo, nil)
 	assert.NoError(t, err)
@@ -46,7 +46,7 @@ func TestIndexWalkFuncReturnsErrorIfPassed(t *testing.T) {
 	fn := newIndexWalkFunc(i)
 
 	path := filepath.Clean("/level0/level0.txt")
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	e := errors.New("test error")
 
 	err := fn(path, fileInfo, e)
@@ -60,23 +60,23 @@ func TestRemoveIndexesExceptHeadAndCurrent(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	index1 := filepath.Join(dir, "index1")
-	err = os.Mkdir(index1, 0666)
+	err = os.Mkdir(index1, fileMode)
 	assert.NoError(t, err)
 
 	index1File := filepath.Join(dir, "index1", "index1.txt")
-	err = os.WriteFile(index1File, []byte("content"), 0666)
+	err = os.WriteFile(index1File, []byte("content"), fileMode)
 	assert.NoError(t, err)
 
 	index2 := filepath.Join(dir, "index2")
-	err = os.Mkdir(index2, 0666)
+	err = os.Mkdir(index2, fileMode)
 	assert.NoError(t, err)
 
 	index2File := filepath.Join(dir, "index2", "index2.txt")
-	err = os.WriteFile(index2File, []byte("content"), 0666)
+	err = os.WriteFile(index2File, []byte("content"), fileMode)
 	assert.NoError(t, err)
 
 	head := filepath.Join(dir, HeadFileName)
-	err = os.WriteFile(head, []byte("content"), 0666)
+	err = os.WriteFile(head, []byte("content"), fileMode)
 	assert.NoError(t, err)
 
 	err = removeIndexesExclude(dir, "index2")

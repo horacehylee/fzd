@@ -52,7 +52,7 @@ func TestChain(t *testing.T) {
 	fn := walker.Chain(w1, w2)
 
 	path := "/test"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	err := fn(path, fileInfo, nil)
 
 	assert.NoError(t, err)
@@ -74,7 +74,7 @@ func TestChainSecondIsSkippedIfFirstReturnedSkipThis(t *testing.T) {
 	fn := walker.Chain(w1, w2)
 
 	path := "/test"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	err := fn(path, fileInfo, nil)
 
 	assert.Equal(t, walker.SkipThis, err)
@@ -100,7 +100,7 @@ func TestChainSecondIsNotSkippedIfFirstReturnedOtherError(t *testing.T) {
 	fn := walker.Chain(w1, w2)
 
 	path := "/test"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	err := fn(path, fileInfo, nil)
 
 	assert.Equal(t, e, err)
@@ -127,7 +127,7 @@ func TestChainSecondErrorIsReturnedInsteadOfFirstError(t *testing.T) {
 	fn := walker.Chain(w1, w2)
 
 	path := "/test"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	err := fn(path, fileInfo, nil)
 
 	assert.Equal(t, e2, err)
@@ -176,7 +176,7 @@ func TestChainReturnSameErrorIfCombinedDifferently(t *testing.T) {
 	fn3 := walker.Chain(walker.Chain(w1(called3), w2(called3)), w3(called3))
 
 	path := "/test"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	err1 := fn1(path, fileInfo, nil)
 	err2 := fn2(path, fileInfo, nil)
 	err3 := fn3(path, fileInfo, nil)
@@ -224,7 +224,7 @@ func TestChainSkipEquallyIfCombinedDifferentlyForFirst(t *testing.T) {
 	fn3 := walker.Chain(walker.Chain(w1(called3), w2(called3)), w3(called3))
 
 	path := "/test"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	err1 := fn1(path, fileInfo, nil)
 	err2 := fn2(path, fileInfo, nil)
 	err3 := fn3(path, fileInfo, nil)
@@ -276,7 +276,7 @@ func TestChainSkipEquallyIfCombinedDifferentlyForSecond(t *testing.T) {
 	fn3 := walker.Chain(walker.Chain(w1(called3), w2(called3)), w3(called3))
 
 	path := "/test"
-	fileInfo := newMockFileInfo(filepath.Base(path), 0666, false)
+	fileInfo := newMockFileInfo(filepath.Base(path), fileMode, false)
 	err1 := fn1(path, fileInfo, nil)
 	err2 := fn2(path, fileInfo, nil)
 	err3 := fn3(path, fileInfo, nil)
