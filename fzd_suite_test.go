@@ -326,6 +326,24 @@ func (suite *FzdTestSuite) TestSearch() {
 	}, hits)
 }
 
+func (suite *FzdTestSuite) TestSearchWith() {
+	t := suite.T()
+	indexer := suite.indexer
+
+	suite.indexAndOpen()
+
+	req := bleve.NewSearchRequest(bleve.NewWildcardQuery("*txt"))
+	res, err := indexer.SearchWith(req)
+	assert.NoError(t, err)
+
+	hits := suite.readSearchResults(res, 3)
+	assert.Equal(t, []string{
+		suite.level0File,
+		suite.level1File,
+		suite.level2File,
+	}, hits)
+}
+
 func (suite *FzdTestSuite) TestSearchAndDocCountAfterIndexSwapped() {
 	t := suite.T()
 	indexer := suite.indexer
@@ -350,10 +368,15 @@ func (suite *FzdTestSuite) TestSearchAndDocCountAfterIndexSwapped() {
 		suite.level2File,
 	}, hits1)
 
+	time1, err := indexer.LastIndexed()
+	assert.NoError(t, err)
+
 	extraFile := filepath.Join(suite.level0Dir, "extra.txt")
 	err = os.WriteFile(extraFile, []byte("content"), fileMode)
 	assert.NoError(t, err)
 	defer os.Remove(extraFile)
+
+	time.Sleep(1 * time.Second)
 
 	name2 := suite.indexAndOpen()
 	assert.NotEqual(t, name2, name1)
@@ -376,6 +399,10 @@ func (suite *FzdTestSuite) TestSearchAndDocCountAfterIndexSwapped() {
 		suite.level1File,
 		suite.level2File,
 	}, hits2)
+
+	time2, err := indexer.LastIndexed()
+	assert.NoError(t, err)
+	assert.Greater(t, time2.Unix(), time1.Unix())
 }
 
 func (suite *FzdTestSuite) TestSearchReturnsErrorIfNotOpened() {
