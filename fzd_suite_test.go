@@ -393,7 +393,7 @@ func (suite *FzdTestSuite) TestSearchAndDocCountAfterIndexSwapped() {
 	assert.NoError(t, err)
 
 	hits2 := suite.readSearchResults(res2, 4)
-	assert.Equal(t, []string{
+	assert.ElementsMatch(t, []string{
 		extraFile,
 		suite.level0File,
 		suite.level1File,
