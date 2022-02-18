@@ -11,12 +11,6 @@ import (
 )
 
 func main() {
-	log := newLogger()
-	c, err := newConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	app := &cli.App{
 		Usage: "Golang file indexer and fuzzy file finder utiliy tool",
 		Flags: []cli.Flag{
@@ -28,28 +22,34 @@ func main() {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			indexer, err := newIndexer(c)
+			cfg, err := newConfig()
 			if err != nil {
 				return err
 			}
+			indexer, err := newIndexer(cfg)
+			if err != nil {
+				return err
+			}
+
 			switch ctx.NArg() {
 			case 0:
-				return statusOrIndex(ctx, c, indexer)
+				return statusOrIndex(ctx, indexer)
 			case 1:
-				return search(ctx, c, indexer)
+				return search(ctx, cfg, indexer)
 			default:
 				return fmt.Errorf("too much arguments are passed: %v", ctx.Args())
 			}
 		},
 	}
 
-	err = app.Run(os.Args)
+	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
 	}
 }
 
-func statusOrIndex(ctx *cli.Context, c config, indexer *fzd.Indexer) error {
+func statusOrIndex(ctx *cli.Context, indexer *fzd.Indexer) error {
 	err := indexer.Open()
 	if err != nil {
 		return indexIfNotExists(indexer, err)
@@ -98,7 +98,7 @@ func index(indexer *fzd.Indexer) error {
 	return nil
 }
 
-func search(ctx *cli.Context, c config, indexer *fzd.Indexer) error {
+func search(ctx *cli.Context, cfg config, indexer *fzd.Indexer) error {
 	term := ctx.Args().First()
 	if term == "" {
 		return fmt.Errorf("term cannot be blank")

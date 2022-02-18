@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/horacehylee/fzd"
 	"github.com/spf13/viper"
@@ -24,7 +27,7 @@ func newConfig() (config, error) {
 	viper.SetConfigName(".fzd")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("$HOME/.fzd")
+	viper.AddConfigPath(filepath.Join("$HOME", ".fzd"))
 
 	viper.SetDefault("index.basepath", "$HOME/.fzd/indexes")
 
@@ -65,9 +68,9 @@ func (c *config) parse() error {
 		return err
 	}
 
-	c.Index.BasePath = os.ExpandEnv(c.Index.BasePath)
+	c.Index.BasePath = absPathify(c.Index.BasePath)
 	for i := range c.Locations {
-		c.Locations[i].Path = os.ExpandEnv(c.Locations[i].Path)
+		c.Locations[i].Path = absPathify(c.Locations[i].Path)
 	}
 	return nil
 }
@@ -75,4 +78,32 @@ func (c *config) parse() error {
 func (c *config) validate() error {
 	// TODO: check all mandatory fields
 	return nil
+}
+
+func userHomeDir() string {
+	if runtime.GOOS == "windows" {
+		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
+		if home == "" {
+			home = os.Getenv("USERPROFILE")
+		}
+		return home
+	}
+	return os.Getenv("HOME")
+}
+
+func absPathify(inPath string) string {
+	inPath = filepath.Clean(inPath)
+	if inPath == "$HOME" || strings.HasPrefix(inPath, "$HOME"+string(os.PathSeparator)) {
+		inPath = userHomeDir() + inPath[5:]
+	}
+	inPath = os.ExpandEnv(inPath)
+
+	if filepath.IsAbs(inPath) {
+		return filepath.Clean(inPath)
+	}
+	p, err := filepath.Abs(inPath)
+	if err == nil {
+		return filepath.Clean(p)
+	}
+	return ""
 }
